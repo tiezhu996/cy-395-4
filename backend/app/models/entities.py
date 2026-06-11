@@ -40,3 +40,15 @@ class ApiCall(Base):
     client_id: Mapped[int] = mapped_column(ForeignKey("api_clients.id"))
     path: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ConversionHistory(Base):
+    __tablename__ = "conversion_history"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("api_clients.id"), index=True)
+    source_currency: Mapped[str] = mapped_column(String(3))
+    target_currency: Mapped[str] = mapped_column(String(3))
+    amount: Mapped[float] = mapped_column(Float)
+    converted_amount: Mapped[float] = mapped_column(Float)
+    rate: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

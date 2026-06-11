@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 
@@ -22,3 +22,13 @@ class ConvertResponse(BaseModel):
     converted_amount: float
     rate: float
     chain: list[str]
+
+
+class ConversionHistoryResponse(BaseModel):
+    id: int
+    source_currency: str
+    target_currency: str
+    amount: float
+    converted_amount: float
+    rate: float
+    created_at: datetime

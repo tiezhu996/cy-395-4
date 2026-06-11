@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from app.constants.currencies import CURRENCIES
-from app.models.entities import ExchangeRate
+from app.models.entities import ExchangeRate, ConversionHistory
 
 
 def list_currencies() -> list[dict]:
@@ -27,7 +27,7 @@ def historical_rates(db: Session, base: str, quote: str, start: date, end: date)
     return db.query(ExchangeRate).filter(ExchangeRate.base == base.upper(), ExchangeRate.quote == quote.upper(), ExchangeRate.rate_date >= start, ExchangeRate.rate_date <= end).order_by(ExchangeRate.rate_date).all()
 
 
-def convert(db: Session, source: str, target: str, amount: float) -> dict:
+def convert(db: Session, source: str, target: str, amount: float, client_id: int | None = None) -> dict:
     source = source.upper()
     target = target.upper()
     if source == "USD":
@@ -43,4 +43,29 @@ def convert(db: Session, source: str, target: str, amount: float) -> dict:
         target_rate = latest_rate(db, "USD", target)
         chain = [source, "USD", target]
         final_rate = (target_rate.rate if target_rate else 1) / (source_rate.rate if source_rate else 1)
-    return {"source": source, "target": target, "amount": amount, "converted_amount": round(amount * final_rate, 4), "rate": round(final_rate, 6), "chain": chain}
+    result = {"source": source, "target": target, "amount": amount, "converted_amount": round(amount * final_rate, 4), "rate": round(final_rate, 6), "chain": chain}
+    if client_id is not None:
+        _save_conversion_history(db, client_id, source, target, amount, result["converted_amount"], result["rate"])
+    return result
+
+
+def _save_conversion_history(db: Session, client_id: int, source: str, target: str, amount: float, converted_amount: float, rate: float) -> None:
+    db.add(ConversionHistory(
+        client_id=client_id,
+        source_currency=source,
+        target_currency=target,
+        amount=amount,
+        converted_amount=converted_amount,
+        rate=rate,
+    ))
+    db.commit()
+
+
+def list_conversion_history(db: Session, client_id: int, limit: int = 10) -> list[ConversionHistory]:
+    return (
+        db.query(ConversionHistory)
+        .filter(ConversionHistory.client_id == client_id)
+        .order_by(ConversionHistory.created_at.desc())
+        .limit(limit)
+        .all()
+    )
